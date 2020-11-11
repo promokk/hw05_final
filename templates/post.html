@@ -1,0 +1,16 @@
+{% extends "profile.html" %}
+
+            <div class="col-md-9">                
+
+                {% block content %} 
+                    {% include "post_item.html" with post=post %}
+                    {% include "comments.html" %}
+                
+                
+                {% if page.has_other_pages %}
+                    {% include "paginator.html" with items=page paginator=paginator%}
+                {% endif %}
+     </div>
+    </div>
+</main>
+{% endblock %}

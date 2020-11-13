@@ -7,7 +7,7 @@ class PostForm(forms.ModelForm):
     class Meta():
         model = Post
         fields = ('text', 'group', 'image')
-        labels = {'text': 'Введите текст', 'group': 'Выберите группу'}
+        labels = {'text': 'Введите текст', 'group': 'Выберите группу', 'image': 'Загрузите картинку'}
         help_texts = {'group': 'Из уже существующих'}
 
 
@@ -18,7 +18,3 @@ class CommentForm(forms.ModelForm):
         model = Comment
         fields = ('text',)
         labels = {'text': 'Введите текст комментария'}
-
-
-# class CommentForm(forms.Form):
-#     comment = forms.CharField(widget=forms.Textarea)

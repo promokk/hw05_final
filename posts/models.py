@@ -15,7 +15,7 @@ class Group(models.Model):
 
 class Post(models.Model):
     text = models.TextField()
-    pub_date = models.DateTimeField("date published", auto_now_add=True)
+    pub_date = models.DateTimeField("date published", auto_now_add=True, db_index=True)
     author = models.ForeignKey(User,
                                on_delete=models.CASCADE,
                                related_name="posts")
@@ -52,3 +52,9 @@ class Follow(models.Model):
                                on_delete=models.CASCADE,
                                related_name="following",
                                )
+    
+    class Meta:
+        # constraints = [
+        #     models.UniqueConstraint(fields=["user", "author"], name="unique_object")
+        # ]
+        unique_together = ["user", "author"]

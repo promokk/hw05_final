@@ -133,7 +133,6 @@ class StaticURLTests(TestCase):
         self.assertContains(response_post, '<img')
 
     def test_cache_after_time(self):
-        # Тест работал, а теперь почему то падает, не могу понять.
         response_old = self.authorized_client.get(reverse('index'))
         self.authorized_client.post(
                                     reverse('new_post'),
@@ -145,27 +144,37 @@ class StaticURLTests(TestCase):
         response_newest = self.authorized_client.get(reverse('index'))
         self.assertNotEqual(response_old.content, response_newest.content)
 
-    def test_follow_create_and_delete(self):
-        response = self.authorized_client.post(
-                                            reverse('profile_follow',
-                                            kwargs=
-                                            {
-                                            'username': self.user_first,
-                                            }),
-                                            follow=True)
-        self.assertEqual(response.status_code, 200)
-
-        response = self.authorized_client.post(
-                                            reverse('profile_unfollow',
-                                            kwargs=
-                                            {
-                                            'username': self.user_first,
-                                            }),
-                                            follow=True)
-        self.assertEqual(response.status_code, 200)
+    def test_follow(self):
+        follow_count = Follow.objects.count()
+        self.authorized_client.get(
+                                reverse('profile_follow',
+                                kwargs=
+                                {
+                                'username': self.user_first,
+                                }))
+        self.assertEqual(Follow.objects.count(), follow_count + 1)
     
-    def test_check_follow(self):
-        self.authorized_client.post(
+    def test_unfollow(self):
+        self.authorized_client.get(
+                                reverse('profile_follow',
+                                kwargs=
+                                {
+                                'username': self.user_first,
+                                }))
+        follow_count = Follow.objects.count()
+        self.authorized_client.get(
+                                reverse('profile_unfollow',
+                                kwargs=
+                                {
+                                'username': self.user_first,
+                                }))
+        self.assertEqual(Follow.objects.count(), follow_count - 1)
+    
+    # Если включить тесты ниже, три верхних теста падают.
+    # Как тесты могут взаимодействовать? И как это исправить?
+    # А test_check_follow_authorized не работает, почему то нет поста на странице...
+    def test_check_follow_authorized(self):
+        self.authorized_client.get(
                                     reverse('profile_follow',
                                     kwargs=
                                     {
@@ -173,21 +182,30 @@ class StaticURLTests(TestCase):
                                     }),
                                     follow=True)
         self.authorized_client.force_login(self.user_first)
+        self.authorized_client.post(
+                                reverse('new_post'),
+                                {'text': 'Новый пост!'},
+                                follow=True)
+        post_check = Post.objects.first()
+        self.authorized_client.force_login(self.user)
+        response = self.authorized_client.get(reverse('follow_index'), follow=True)
+        response = response.context['page'][0].text
+        self.assertContains(response, post_check.text)
+    
+    def test_check_follow_unauthorized(self):
+        self.authorized_client.force_login(self.user_first)
         post_check = self.authorized_client.post(
                                         reverse('new_post'),
                                         {'text': 'Новый пост!'},
                                         follow=True)
         post_check = Post.objects.first()
-        self.authorized_client.force_login(self.user)
-        response = self.authorized_client.get(reverse('follow_index'), follow=True)
-        self.assertContains(response, post_check.pk)
-
         self.authorized_client.force_login(self.user_second)
         response = self.authorized_client.get(reverse('follow_index'), follow=True)
-        # Почему тест падает при проверки на наличие поста через post_check.pk?
-        self.assertNotContains(response, post_check.text)
+        response = response.context['page'][0].text
+        self.assertNotEqual(response, post_check.text)
+
     
-    def test_add_comment(self):
+    def test_add_comment_authorized(self):
         post_check = Post.objects.first()
         comment_count = Comment.objects.count()
         self.authorized_client.force_login(self.user_first)
@@ -204,6 +222,9 @@ class StaticURLTests(TestCase):
                                 follow=True)
         self.assertEqual(Comment.objects.count(), comment_count + 1)
 
+    def test_add_comment_unauthorized(self):
+        post_check = Post.objects.first()
+        comment_count = Comment.objects.count()
         self.authorized_client.logout()
         self.authorized_client.post(
                                 reverse('add_comment',
@@ -216,7 +237,8 @@ class StaticURLTests(TestCase):
                                     'text': 'Лайк'
                                 },
                                 follow=True)
-        self.assertNotEquals(Comment.objects.count(), comment_count + 2)
+        self.assertNotEquals(Comment.objects.count(), comment_count + 1)
+
         
 
         

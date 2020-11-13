@@ -6,28 +6,26 @@
                     <div class="card">
                             <div class="card-body">
                                     <div class="h2">
-                                        <!-- Имя автора -->
                                         {{ author.first_name }} {{ author.last_name }}
                                     </div>
                                     <div class="h3 text-muted">
-                                         <!-- username автора -->
                                          {{ author.username }}
                                     </div>
                             </div>
                             <ul class="list-group list-group-flush">
                                     <li class="list-group-item">
                                             <div class="h6 text-muted">
-                                            Подписчиков: {{ followers }} <br />
-                                            Подписан: {{ followings }}
+                                            Подписчиков: {{ author.following.count }} <br />
+                                            Подписан: {{ author.follower.count }}
                                             </div>
                                     </li>
                                     <li class="list-group-item">
                                             <div class="h6 text-muted">
-                                                <!-- Количество записей -->
                                                 Записей: {{ author.posts.count }}
                                             </div>
                                     </li>
                             </ul>
+                            {% if user.username != author.username %}
                             <li class="list-group-item">
                                 {% if following %}
                                 <a class="btn btn-lg btn-light" 
@@ -40,6 +38,7 @@
                                 Подписаться 
                                 </a>
                                 {% endif %}
+                            {% endif %}
                             </li>
                     </div>
             </div>
@@ -47,16 +46,11 @@
             <div class="col-md-9"> 
             {% endblock %}               
 
-                <!-- Начало блока с отдельным постом -->
                 {% block content %} 
                 {% for post in page %}
                     {% include "post_item.html" with post=post %}
                 {% endfor %}
-                <!-- Конец блока с отдельным постом --> 
 
-                <!-- Остальные посты -->  
-
-                <!-- Здесь постраничная навигация паджинатора -->
                 {% if page.has_other_pages %}
                 {% include "paginator.html" with items=page paginator=paginator%}
                 {% endif %}

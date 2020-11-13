@@ -7,7 +7,7 @@
     <div class="col-md-8 p-5">
         <div class="card">
             <div class="card-header">
-                {% if flag == "Новый пост" %}
+                {% if flag %}
                     Новая запись
                 {% else %}
                     Редактировать запись
@@ -37,7 +37,7 @@
 
                     <div class="col-md-6 offset-md-4">              
                             <button type="submit" class="btn btn-primary">
-                                {% if flag == "Новый пост" %}
+                                {% if flag %}
                                     Создать
                                 {% else %}
                                     Сохранить

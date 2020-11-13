@@ -4,7 +4,6 @@ from django.views.generic import CreateView
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
-# from django.views.decorators.cache import cache_page
 
 
 from .models import Post, Group, User, Comment, Follow
@@ -47,7 +46,7 @@ def new_post(request):
             return redirect("index")
     return render(request, "new_post.html", {
                                             "form": form,
-                                            "flag": "Новый пост"
+                                            "flag": True
                                             })
 
 
@@ -57,18 +56,15 @@ def profile(request, username):
     paginator = Paginator(post_list, 10)
     page_number = request.GET.get('page')
     page = paginator.get_page(page_number)
-    followers = Follow.objects.filter(author__username=username).count()
-    following = Follow.objects.filter(user__username=username).count()
     is_follow = author.following.filter(user=request.user.id).exists()
     return render(
         request,
         "profile.html",
         {
             "author": author,
+            "user": request.user,
             "page": page,
             "paginator": paginator,
-            "followers": followers,
-            "followings": following,
             "following": is_follow
         }
     )
@@ -98,8 +94,8 @@ def post_edit(request, username, post_id):
             post.save()
             return redirect(
                 "post",
-                username=f"{username}",
-                post_id=f"{post_id}"
+                username=username,
+                post_id=post_id
             )
     return render(
         request,
@@ -107,7 +103,7 @@ def post_edit(request, username, post_id):
         {
             "form": form,
             "post": post,
-            "flag": "Правка"
+            "flag": False
         }
     )
 
@@ -115,7 +111,6 @@ def post_edit(request, username, post_id):
 @login_required
 def add_comment(request, username, post_id):
     post = get_object_or_404(Post, author__username=username, id=post_id)
-    author = get_object_or_404(User, username=request.user)
     form = CommentForm(request.POST or None)
     if request.method == "POST":
         if form.is_valid():
@@ -125,23 +120,20 @@ def add_comment(request, username, post_id):
             comment.save()
             return redirect(
                 "post",
-                username=f"{username}",
-                post_id=f"{post_id}"
+                username=username,
+                post_id=post_id
             )
     return render(
         request,
-        "comments.html",
+        "post.html",
         {
             "form": form,
-            "post": post,
-            "author": author
+            "post": post
         }
     )
 
 
 def page_not_found(request, exception):
-    # Переменная exception содержит отладочную информацию, 
-    # выводить её в шаблон пользователской страницы 404 мы не станем
     return render(
         request, 
         "misc/404.html", 
@@ -180,5 +172,5 @@ def profile_follow(request, username):
 @login_required
 def profile_unfollow(request, username):
     author = get_object_or_404(User, username=username)
-    Follow.objects.get(user=request.user, author=author).delete()
+    Follow.objects.filter(user=request.user, author=author).delete()
     return redirect("profile", username=username)

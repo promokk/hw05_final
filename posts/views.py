@@ -78,7 +78,12 @@ def post_view(request, username, post_id):
     return render(
         request,
         "post.html",
-        {"author": post.author, "post": post, "comments": comments, "form": form}
+        {
+            "author": post.author,
+            "post": post,
+            "comments": comments, 
+            "form": form
+        }
     )
 
 
@@ -135,9 +140,9 @@ def add_comment(request, username, post_id):
 
 def page_not_found(request, exception):
     return render(
-        request, 
-        "misc/404.html", 
-        {"path": request.path}, 
+        request,
+        "misc/404.html",
+        {"path": request.path},
         status=404
     )
 
@@ -160,6 +165,7 @@ def follow_index(request):
             "paginator": paginator
         }
     )
+
 
 @login_required
 def profile_follow(request, username):

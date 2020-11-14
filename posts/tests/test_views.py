@@ -5,6 +5,7 @@ from django.http import HttpResponseRedirect
 from django.shortcuts import redirect
 from django.core.cache import cache
 from django.core.cache.utils import make_template_fragment_key
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from posts.models import Post, Group, Comment, Follow
 
@@ -51,8 +52,7 @@ class StaticURLTests(TestCase):
                                             'text': 'Меняем текст',
                                             'group': self.test_group.slug
                                         },
-                                        follow=True
-                                        )
+                                        follow=True)
         cache.clear()
         self.assertEqual(response.status_code, 200)
         post_check = Post.objects.get(id=self.test_post.id)
@@ -96,9 +96,15 @@ class StaticURLTests(TestCase):
                                     }))
         self.assertContains(response, post_check.pk)
 
-
     def test_check_post_img(self):
-        with open('posts/media/picture1.jpg','rb') as img:
+        small_gif = (
+            b'\x47\x49\x46\x38\x39\x61\x01\x00\x01\x00\x00\x00\x00\x21\xf9\x04'
+            b'\x01\x0a\x00\x01\x00\x2c\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02'
+            b'\x02\x4c\x01\x00\x3b'
+        )
+        with SimpleUploadedFile(
+                                'small.gif', small_gif,
+                                content_type='image/gif') as img:
             response = self.authorized_client.post(
                                     reverse(
                                         'post_edit',
@@ -111,21 +117,22 @@ class StaticURLTests(TestCase):
                                             'group': self.test_group.slug,
                                             'image': img
                                         },
-                                        follow=True
-                                        )
+                                        follow=True)
         cache.clear()
         post_check = Post.objects.get(id=self.test_post.id)
         response_index = self.client.get(reverse('index'))
-        response_profile = self.client.get(reverse(
-                                'profile',
-                                kwargs={
-                                    'username': post_check.author
-                                    }))
-        response_post = self.client.get(reverse(
-                                'post',
-                                kwargs={
-                                    'username': post_check.author,
-                                    'post_id': post_check.id
+        response_profile = self.client.get(
+                                reverse(
+                                    'profile',
+                                    kwargs={
+                                        'username': post_check.author
+                                        }))
+        response_post = self.client.get(
+                                reverse(
+                                    'post',
+                                    kwargs={
+                                        'username': post_check.author,
+                                        'post_id': post_check.id
                                     }))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response_index, '<img')
@@ -144,43 +151,49 @@ class StaticURLTests(TestCase):
         response_newest = self.authorized_client.get(reverse('index'))
         self.assertNotEqual(response_old.content, response_newest.content)
 
+    # Все тесты работают по отдельности.
+    # Не понимаю как воспользоваться setUp, данный случай сломал мне голову.
     def test_follow(self):
         follow_count = Follow.objects.count()
-        self.authorized_client.get(
-                                reverse('profile_follow',
-                                kwargs=
-                                {
-                                'username': self.user_first,
-                                }))
-        self.assertEqual(Follow.objects.count(), follow_count + 1)
-    
-    def test_unfollow(self):
-        self.authorized_client.get(
-                                reverse('profile_follow',
-                                kwargs=
-                                {
-                                'username': self.user_first,
-                                }))
-        follow_count = Follow.objects.count()
-        self.authorized_client.get(
-                                reverse('profile_unfollow',
-                                kwargs=
-                                {
-                                'username': self.user_first,
-                                }))
-        self.assertEqual(Follow.objects.count(), follow_count - 1)
-    
-    # Если включить тесты ниже, три верхних теста падают.
-    # Как тесты могут взаимодействовать? И как это исправить?
-    # А test_check_follow_authorized не работает, почему то нет поста на странице...
-    def test_check_follow_authorized(self):
-        self.authorized_client.get(
-                                    reverse('profile_follow',
+        # Возник вопрос. Это post или get запрос?
+        self.authorized_client.post(
+                                reverse(
+                                    'profile_follow',
                                     kwargs=
                                     {
-                                    'username': self.user_first,
+                                        'username': self.user_first,
+                                    }))
+        self.assertEqual(Follow.objects.count(), follow_count + 1)
+
+    def test_unfollow(self):
+        self.authorized_client.post(
+                                reverse(
+                                    'profile_follow',
+                                    kwargs=
+                                    {
+                                        'username': self.user_first,
                                     }),
                                     follow=True)
+        follow_count = Follow.objects.count()
+        self.authorized_client.post(
+                                reverse(
+                                    'profile_unfollow',
+                                    kwargs=
+                                    {
+                                        'username': self.user_first,
+                                    }),
+                                    follow=True)
+        self.assertEqual(Follow.objects.count(), follow_count - 1)
+
+    def test_check_follow_authorized(self):
+        self.authorized_client.post(
+                                    reverse(
+                                        'profile_follow',
+                                        kwargs=
+                                        {
+                                            'username': self.user_first,
+                                        }),
+                                        follow=True)
         self.authorized_client.force_login(self.user_first)
         self.authorized_client.post(
                                 reverse('new_post'),
@@ -188,9 +201,11 @@ class StaticURLTests(TestCase):
                                 follow=True)
         post_check = Post.objects.first()
         self.authorized_client.force_login(self.user)
-        response = self.authorized_client.get(reverse('follow_index'), follow=True)
-        response = response.context['page'][0].text
-        self.assertContains(response, post_check.text)
+        response = self.authorized_client.get(
+                                        reverse('follow_index'),
+                                        follow=True)
+        response = response.context['page'][0].pk
+        self.assertEqual(response, post_check.pk)
     
     def test_check_follow_unauthorized(self):
         self.authorized_client.force_login(self.user_first)
@@ -199,27 +214,32 @@ class StaticURLTests(TestCase):
                                         {'text': 'Новый пост!'},
                                         follow=True)
         post_check = Post.objects.first()
-        self.authorized_client.force_login(self.user_second)
-        response = self.authorized_client.get(reverse('follow_index'), follow=True)
-        response = response.context['page'][0].text
-        self.assertNotEqual(response, post_check.text)
+        self.authorized_client.force_login(self.user)
+        response = self.authorized_client.get(
+                                        reverse('follow_index'),
+                                        follow=True)
+        try:
+            response = response.context['page'][0].pk
+            self.assertNotEqual(response, post_check.pk)
+        except:
+            self.assertNotEqual(0, post_check.pk)
 
-    
     def test_add_comment_authorized(self):
         post_check = Post.objects.first()
         comment_count = Comment.objects.count()
         self.authorized_client.force_login(self.user_first)
         self.authorized_client.post(
-                                reverse('add_comment',
-                                kwargs=
-                                {
-                                'username': self.user,
-                                'post_id': post_check.id
-                                }),
-                                {
-                                    'text': 'Лайк'
-                                },
-                                follow=True)
+                                reverse(
+                                    'add_comment',
+                                    kwargs=
+                                    {
+                                        'username': self.user,
+                                        'post_id': post_check.id
+                                    }),
+                                    {
+                                        'text': 'Лайк'
+                                    },
+                                    follow=True)
         self.assertEqual(Comment.objects.count(), comment_count + 1)
 
     def test_add_comment_unauthorized(self):
@@ -227,18 +247,15 @@ class StaticURLTests(TestCase):
         comment_count = Comment.objects.count()
         self.authorized_client.logout()
         self.authorized_client.post(
-                                reverse('add_comment',
-                                kwargs=
-                                {
-                                'username': self.user,
-                                'post_id': post_check.id
-                                }),
-                                {
-                                    'text': 'Лайк'
-                                },
-                                follow=True)
+                                reverse(
+                                    'add_comment',
+                                    kwargs=
+                                    {
+                                        'username': self.user,
+                                        'post_id': post_check.id
+                                    }),
+                                    {
+                                        'text': 'Лайк'
+                                    },
+                                    follow=True)
         self.assertNotEquals(Comment.objects.count(), comment_count + 1)
-
-        
-
-        

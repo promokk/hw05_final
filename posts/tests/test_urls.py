@@ -45,7 +45,6 @@ class StaticURLTests(TestCase):
         response = self.authorized_client.get('/StasBasov/')
         self.assertEqual(response.status_code, 200)
 
-
     def test_error_page(self):
         response = self.authorized_client.get('/error12345/')
         self.assertEqual(response.status_code, 404)

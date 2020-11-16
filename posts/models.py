@@ -26,7 +26,7 @@ class Post(models.Model):
                               related_name="posts",
                               blank=True,
                               null=True)
-    image = models.ImageField(upload_to='posts/', blank=True, null=True) 
+    image = models.ImageField(upload_to='posts/', blank=True, null=True)
 
     class Meta:
         ordering = ["-pub_date"]
@@ -36,10 +36,10 @@ class Comment(models.Model):
     text = models.TextField()
     created = models.DateTimeField("date published", auto_now_add=True)
     post = models.ForeignKey(Post,
-                              on_delete=models.CASCADE,
-                              related_name="comments",
-                              blank=True,
-                              null=True)
+                             on_delete=models.CASCADE,
+                             related_name="comments",
+                             blank=True,
+                             null=True)
     author = models.ForeignKey(User,
                                on_delete=models.CASCADE,
                                related_name="comments")
@@ -47,9 +47,9 @@ class Comment(models.Model):
 
 class Follow(models.Model):
     user = models.ForeignKey(User,
-                              on_delete=models.CASCADE,
-                              related_name="follower"
-                              )
+                             on_delete=models.CASCADE,
+                             related_name="follower"
+                             )
     author = models.ForeignKey(User,
                                on_delete=models.CASCADE,
                                related_name="following",

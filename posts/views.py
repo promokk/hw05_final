@@ -81,7 +81,7 @@ def post_view(request, username, post_id):
         {
             "author": post.author,
             "post": post,
-            "comments": comments, 
+            "comments": comments,
             "form": form
         }
     )
